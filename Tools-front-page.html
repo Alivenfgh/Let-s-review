@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDF Tools</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #0b1446;
+    color: #d0f0ec;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+  h1 {
+    color: #1abc9c;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: 1.2px;
+  }
+  .button-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 240px;
+  }
+  a.button {
+    background: #1abc9c;
+    color: #0b1446;
+    padding: 1rem 1.5rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    text-decoration: none;
+    box-shadow: 0 5px 12px rgba(26,188,156,0.5);
+    transition: background 0.3s ease;
+    user-select: none;
+  }
+  a.button:hover {
+    background: #16a085;
+    box-shadow: 0 6px 16px rgba(22,160,133,0.7);
+  }
+  .signature {
+    margin-top: 3rem;
+    font-size: 1rem;
+    font-style: italic;
+    font-weight: 600;
+    color: #71d1c1;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+  <h1>PDF Tools</h1>
+  <div class="button-container">
+    <a href="PDF-to-text-converter.html" class="button" role="button" aria-label="Go to PDF to Text Converter">PDF to Text Converter</a>
+    <a href="Splitter.html" class="button" role="button" aria-label="Go to PDF Splitter">PDF Splitter</a>
+    <a href="word-to-pdf.html" class="button" role="button" aria-label="Go to Word to PDF Converter">Word to PDF Converter</a>
+  </div>
+  <div class="signature" aria-label="Signature">
+    By:Sweetgwapa
+  </div>
+</body>
+</html>

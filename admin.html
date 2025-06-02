@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Let's Review - Admin</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: 0; min-height: 100vh;
+    color: #f8f9fa;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 1rem;
+    position: relative;
+  }
+  header {
+    font-weight: 600;
+    font-size: 1.8rem;
+    margin: 1rem 0 1rem 0;
+    text-align: center;
+    text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    width: 100%;
+  }
+  main {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 1.5rem;
+    max-width: 720px;
+    width: 100%;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  label, button, input {
+    font-weight: 600;
+  }
+  label {
+    display: block;
+    margin-bottom: 0.25rem;
+  }
+  input[type="file"],
+  input[type="url"],
+  input[type="number"],
+  textarea {
+    margin-bottom: 1rem;
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: none;
+    font-family: monospace, monospace;
+  }
+  input[type="number"] {
+    width: 4rem;
+    text-align: center;
+  }
+  button {
+    background: #5a60ff;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    margin-top: 1rem;
+  }
+  button:disabled {
+    background: #888;
+    cursor: not-allowed;
+  }
+  button:hover:not(:disabled) {
+    background: #474edb;
+  }
+  #shuffleContainer {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  #shuffleBtn {
+    background: #ff6b6b;
+  }
+  #linkContainer {
+    margin-top: 1rem;
+    text-align: center;
+  }
+  #generatedLink {
+    margin-top: 0.5rem;
+    color: #ffd369;
+    width: 80%;
+    border-radius: 6px;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: none;
+    background: rgba(0,0,0,0.3);
+    color: #ffd369;
+    user-select: all;
+  }
+  #questionCountContainer, #timerSettings {
+    margin-top: 0.5rem;
+    text-align: center;
+  }
+  #signature {
+    margin-top: 1.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #ccc;
+    font-style: italic;
+    text-align: center;
+  }
+  #toolsBtn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: #1abc9c;
+    color: #0b1446;
+    padding: 0.5rem 1rem;
+    font-weight: 700;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 5px 12px rgba(26,188,156,0.5);
+    transition: background 0.3s ease;
+    z-index: 1000;
+  }
+  #toolsBtn:hover {
+    background: #16a085;
+    box-shadow: 0 6px 16px rgba(22,160,133,0.7);
+  }
+</style>
+</head>
+<body>
+<header>Let's Review - Admin</header>
+
+<button id="toolsBtn">Tools</button>
+
+<main>
+
+  <label for="pdfInput">Upload Source Material PDF(s):</label>
+  <input type="file" id="pdfInput" multiple accept="application/pdf" />
+
+  <label for="websiteInput">Or enter website URL as source material:</label>
+  <input type="url" id="websiteInput" placeholder="https://example.com" />
+
+  <button id="fetchWebsiteBtn">Fetch Website Text</button>
+
+  <div id="timerSettings">
+    <label for="timerHours">Timer Hours (max 24):</label>
+    <input type="number" id="timerHours" value="0" min="0" max="24" />
+    <label for="timerMinutes">Minutes:</label>
+    <input type="number" id="timerMinutes" value="5" min="0" max="59" />
+  </div>
+
+  <div id="questionCountContainer">
+    <label for="questionCountInput">Number of Questions (max 1000):</label>
+    <input type="number" id="questionCountInput" value="50" min="1" max="1000" />
+  </div>
+
+  <button id="loadMaterialBtn" disabled>Load PDFs and Generate Questions</button>
+  <button id="extractTextBtn" disabled>Extract Text to Plaintext</button>
+
+  <div id="shuffleContainer">
+    <button id="shuffleBtn" disabled>Shuffle Questions</button>
+  </div>
+
+  <div id="materialStatus" style="margin-top:0.5rem;min-height:1.2rem;">No materials loaded.</div>
+
+  <div id="extractedTextContainer" style="display:none;">
+    <label for="extractedText">Extracted Text from PDFs and Website:</label>
+    <textarea id="extractedText" readonly style="height:150px; white-space: pre-wrap; resize: vertical;"></textarea>
+  </div>
+
+  <div id="prepareTestContainer" style="margin-top:1rem; text-align:center;">
+    <button id="prepareTestBtn" disabled>Prepare Test</button>
+  </div>
+
+  <div id="linkContainer" style="display:none;">
+    <label for="generatedLink">Share this test with your testers:</label><br/>
+    <input type="text" id="generatedLink" readonly />
+    <button id="copyLinkBtn" style="margin-left: 0.5rem;">Copy Link</button>
+  </div>
+
+  <div id="log" aria-live="polite" aria-atomic="true" style="margin-top:1rem; max-height: 150px; overflow-y:auto; font-family: monospace; font-size: 0.9rem;"></div>
+
+  <div id="signature">by: Sweetgwapa</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.14.305/build/pdf.min.js"></script>
+<script>
+  let sourceText = '';
+  let questions = [];
+  let questionCount = 50;
+  let previouslyGeneratedWords = new Set();
+
+  const pdfInput = document.getElementById('pdfInput');
+  const websiteInput = document.getElementById('websiteInput');
+  const fetchWebsiteBtn = document.getElementById('fetchWebsiteBtn');
+  const loadMaterialBtn = document.getElementById('loadMaterialBtn');
+  const extractTextBtn = document.getElementById('extractTextBtn');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const prepareTestBtn = document.getElementById('prepareTestBtn');
+  const materialStatus = document.getElementById('materialStatus');
+  const timerHours = document.getElementById('timerHours');
+  const timerMinutes = document.getElementById('timerMinutes');
+  const questionCountInput = document.getElementById('questionCountInput');
+  const extractedTextContainer = document.getElementById('extractedTextContainer');
+  const extractedText = document.getElementById('extractedText');
+  const linkContainer = document.getElementById('linkContainer');
+  const generatedLinkInput = document.getElementById('generatedLink');
+  const copyLinkBtn = document.getElementById('copyLinkBtn');
+  const logDiv = document.getElementById('log');
+  const toolsBtn = document.getElementById('toolsBtn');
+
+  function log(text){
+    const now = new Date().toLocaleTimeString();
+    logDiv.textContent += `[${now}] ${text}\n`;
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  async function loadPDFText(file) {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+    let fullText = '';
+    for(let i=1; i <= pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      fullText += pageText + ' ';
+    }
+    return fullText;
+  }
+
+  async function fetchWebsiteText(url) {
+    const encodedURL = encodeURIComponent(url);
+    const proxyURL = `https://api.allorigins.win/get?url=${encodedURL}`;
+    const response = await fetch(proxyURL);
+    if(!response.ok) throw new Error('Network response error.');
+    const data = await response.json();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data.contents, 'text/html');
+    doc.querySelectorAll('script,style,noscript').forEach(el => el.remove());
+    return doc.body.innerText.trim();
+  }
+
+  pdfInput.addEventListener('change', () => {
+    const hasFiles = pdfInput.files.length > 0;
+    loadMaterialBtn.disabled = !hasFiles;
+    extractTextBtn.disabled = !hasFiles;
+    materialStatus.textContent = hasFiles ? `${pdfInput.files.length} PDF(s) ready.` : 'No materials loaded.';
+    extractedTextContainer.style.display = 'none';
+    extractedText.textContent = '';
+    shuffleBtn.disabled = true;
+    prepareTestBtn.disabled = true;
+    linkContainer.style.display = 'none';
+  });
+
+  questionCountInput.addEventListener('input', () => {
+    let val = parseInt(questionCountInput.value);
+    if (isNaN(val) || val < 1) val = 1;
+    if (val > 1000) val = 1000;
+    questionCountInput.value = val;
+    questionCount = val;
+    updatePrepareBtnState();
+  });
+
+  function validateTimerInputs() {
+    let h = parseInt(timerHours.value);
+    let m = parseInt(timerMinutes.value);
+    if (isNaN(h) || h < 0 || h > 24) return false;
+    if (isNaN(m) || m < 0 || m > 59) return false;
+    if (h === 0 && m === 0) return false;
+    return true;
+  }
+
+  function updatePrepareBtnState(){
+    const validTimer = validateTimerInputs();
+    prepareTestBtn.disabled = !(questions.length > 0 && validTimer);
+  }
+
+  timerHours.addEventListener('input', () => {
+    if(parseInt(timerHours.value) > 24) timerHours.value = 24;
+    if(parseInt(timerHours.value) < 0) timerHours.value = 0;
+    updatePrepareBtnState();
+  });
+  timerMinutes.addEventListener('input', () => {
+    if(parseInt(timerMinutes.value) > 59) timerMinutes.value = 59;
+    if(parseInt(timerMinutes.value) < 0) timerMinutes.value = 0;
+    updatePrepareBtnState();
+  });
+
+  async function loadMaterials() {
+    loadMaterialBtn.disabled = true;
+    extractTextBtn.disabled = true;
+    prepareTestBtn.disabled = true;
+    shuffleBtn.disabled = true;
+    pdfInput.disabled = true;
+    websiteInput.disabled = true;
+    fetchWebsiteBtn.disabled = true;
+
+    sourceText = '';
+
+    materialStatus.textContent = 'Loading and extracting...';
+
+    if(pdfInput.files.length > 0){
+      for(let file of pdfInput.files){
+        try {
+          const text = await loadPDFText(file);
+          sourceText += text + '\n\n';
+          log(`Extracted text from PDF "${file.name}"`);
+        } catch(e){
+          log(`Failed to extract text from PDF "${file.name}": ${e.message}`);
+        }
+      }
+    }
+
+    const webURL = websiteInput.value.trim();
+    if(webURL){
+      try {
+        const wtext = await fetchWebsiteText(webURL);
+        sourceText += `--- Text from website ${webURL} ---\n${wtext}\n\n`;
+        log(`Extracted text from website "${webURL}"`);
+      } catch(e){
+        log(`Failed to extract text from website: ${e.message}`);
+      }
+    }
+
+    if(sourceText.trim().length > 100){
+      materialStatus.textContent = 'Materials loaded successfully.';
+      generateQuestionsFromText();
+      shuffleBtn.disabled = false;
+      updatePrepareBtnState();
+      log('Combined source materials loaded and questions generated.');
+      extractedTextContainer.style.display = 'block';
+      extractedText.textContent = sourceText;
+    } else {
+      materialStatus.textContent = 'Insufficient readable text from source materials.';
+      log('Failed to load enough text.');
+      shuffleBtn.disabled = true;
+      prepareTestBtn.disabled = true;
+      extractedTextContainer.style.display = 'none';
+      extractedText.textContent = '';
+    }
+
+    loadMaterialBtn.disabled = false;
+    extractTextBtn.disabled = false;
+    pdfInput.disabled = false;
+    websiteInput.disabled = false;
+    fetchWebsiteBtn.disabled = false;
+  }
+
+  function extractText() {
+    extractedTextContainer.style.display = 'block';
+    extractedText.textContent = sourceText || '(No extracted text available)';
+    log('Displayed extracted text.');
+  }
+
+  // Improved generateQuestionsFromText ensuring unique words between generations
+  function generateQuestionsFromText() {
+    const words = sourceText.toLowerCase()
+      .replace(/[^a-z\s]/g,'')
+      .split(/\s+/)
+      .filter(w => w.length > 5);
+
+    // Filter words excluding previously generated ones
+    let newWordsSet = new Set(words.filter(w => !previouslyGeneratedWords.has(w)));
+
+    // Reset previouslyGeneratedWords if no new words left
+    if(newWordsSet.size === 0) {
+      previouslyGeneratedWords.clear();
+      newWordsSet = new Set(words);
+      log('All words exhausted. Resetting previously generated words.');
+    }
+
+    const uniqueWords = Array.from(newWordsSet).slice(0, 1000);
+
+    // Add these words to previouslyGeneratedWords set
+    uniqueWords.forEach(w => previouslyGeneratedWords.add(w));
+
+    questions = uniqueWords.map(word => ({
+      question: `Select the correct description for the word "${word}":`,
+      options: [
+        `This term relates to ${word}.`,
+        `This term is unrelated to ${word}.`,
+        `This term means something else.`,
+        `This word is not important.`,
+      ],
+      answerIndex: 0
+    }));
+  }
+
+  function shuffleQuestions() {
+    for(let i = questions.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [questions[i], questions[j]] = [questions[j], questions[i]];
+    }
+    log('Questions shuffled.');
+  }
+
+  shuffleBtn.addEventListener('click', () => {
+    shuffleQuestions();
+    updatePrepareBtnState();
+  });
+
+  prepareTestBtn.addEventListener('click', () => {
+    if(questions.length === 0) {
+      alert('No questions generated.');
+      return;
+    }
+    if(!validateTimerInputs()){
+      alert('Please set a valid timer (max 24 hours, max 59 minutes, cannot be 0).');
+      return;
+    }
+    const count = parseInt(questionCountInput.value);
+    if(!(count >=1 && count <= 1000)) {
+      alert('Number of questions must be between 1 and 1000.');
+      return;
+    }
+    const limitedQuestions = questions.slice(0, count);
+    const totalSeconds = parseInt(timerHours.value) * 3600 + parseInt(timerMinutes.value) * 60;
+    const testData = {
+      questions: limitedQuestions,
+      timeLimitSeconds: totalSeconds,
+      createdAt: Date.now()
+    };
+    try {
+      localStorage.setItem('preparedTestData', JSON.stringify(testData));
+      log('Test prepared and saved.');
+      const urlBase = location.origin + location.pathname.replace(/\/[^\/]*$/, '/');
+      const testerURL = urlBase + 'examinee.html';
+      generatedLinkInput.value = testerURL;
+      linkContainer.style.display = 'block';
+      alert('Test prepared successfully! Copy the shareable link below to distribute to examinees.');
+    } catch(e) {
+      alert('Failed to save test data: ' + e.message);
+      log('Error saving test: ' + e.message);
+    }
+  });
+
+  loadMaterialBtn.addEventListener('click', loadMaterials);
+  extractTextBtn.addEventListener('click', extractText);
+
+  copyLinkBtn.addEventListener('click', () => {
+    generatedLinkInput.select();
+    document.execCommand('copy');
+    alert('Link copied to clipboard!');
+  });
+
+  fetchWebsiteBtn.addEventListener('click', async () => {
+    const url = websiteInput.value.trim();
+    if(!url){
+      alert('Please enter a website URL.');
+      return;
+    }
+    fetchWebsiteBtn.disabled = true;
+    fetchWebsiteBtn.textContent = 'Fetching...';
+    try {
+      const encodedURL = encodeURIComponent(url);
+      const proxyURL = `https://api.allorigins.win/get?url=${encodedURL}`;
+      const response = await fetch(proxyURL);
+      if(!response.ok) throw new Error('Network response error.');
+      const data = await response.json();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(data.contents, 'text/html');
+      doc.querySelectorAll('script,style,noscript').forEach(el => el.remove());
+      const text = doc.body.innerText.trim();
+      if(!text){
+        alert('No textual content found on that page.');
+      } else {
+        sourceText += `--- Text from website ${url} ---\n${text}\n\n`;
+        extractedTextContainer.style.display = 'block';
+        extractedText.textContent = sourceText;
+        log(`Extracted website text from ${url}`);
+        alert('Website text added to the source material.');
+        generateQuestionsFromText();
+        shuffleBtn.disabled = false;
+        updatePrepareBtnState();
+      }
+    } catch(e) {
+      alert('Failed to fetch website text: ' + e.message);
+      log('Error fetching website: ' + e.message);
+    } finally {
+      fetchWebsiteBtn.disabled = false;
+      fetchWebsiteBtn.textContent = 'Fetch Website Text';
+    }
+  });
+
+  // Initialize button states
+  loadMaterialBtn.disabled = true;
+  extractTextBtn.disabled = true;
+  prepareTestBtn.disabled = true;
+  shuffleBtn.disabled = true;
+  linkContainer.style.display = 'none';
+
+  // Add event listener for Tools button
+  toolsBtn.addEventListener('click', () => {
+    window.location.href = "Tools-front-page.html";
+  });
+</script>
+</body>
+</html>
+

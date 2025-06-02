@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Let's Review - Examinee</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #4e54c8 0%, #8f94fb 100%);
+      margin: 0;
+      min-height: 100vh;
+      color: #f0f0f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+    }
+    header {
+      font-weight: 600;
+      font-size: 1.8rem;
+      margin: 1rem 0 2rem 0;
+      text-align: center;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+    }
+    main {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 700px;
+      width: 100%;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .timer {
+      font-size: 1.4rem;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 1rem;
+      color: #ffd966;
+      text-shadow: 1px 1px 3px #000;
+    }
+    #questions {
+      margin-top: 1rem;
+    }
+    .question {
+      background: rgba(255, 255, 255, 0.1);
+      margin-bottom: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+    }
+    .question h3 {
+      margin: 0 0 0.5rem 0;
+      font-weight: 600;
+    }
+    .answers label {
+      display: block;
+      cursor: pointer;
+      margin: 0.25rem 0;
+      user-select: none;
+    }
+    .answers input[type="radio"] {
+      margin-right: 0.5rem;
+      cursor: pointer;
+    }
+    #submitBtn {
+      background: #5a60ff;
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 1rem;
+      display: block;
+      width: 100%;
+    }
+    #submitBtn:disabled {
+      background: #888;
+      cursor: not-allowed;
+    }
+    #result {
+      margin-top: 1.5rem;
+      background: rgba(0,0,0,0.4);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 700;
+      color: #b5f5b3;
+      white-space: pre-wrap;
+      line-height: 1.4;
+    }
+    #wrongQuestions {
+      margin-top: 1rem;
+      background: rgba(255, 100, 100, 0.2);
+      padding: 1rem;
+      border-radius: 8px;
+      color: #ffcccc;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    #wrongQuestions ul {
+      padding-left: 1.2rem;
+    }
+    #wrongQuestions li {
+      margin-bottom: 0.75rem;
+    }
+    #signature {
+      margin-top: 2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #ccc;
+      font-style: italic;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+<header>Let's Review - Examinee</header>
+<main>
+  <div id="timer" class="timer">Loading test...</div>
+  <div id="questions"></div>
+  <button id="submitBtn" disabled>Submit Test</button>
+  <div id="result"></div>
+  <div id="wrongQuestions"></div>
+  <div id="signature">by: Sweetgwapa</div>
+</main>
+
+<script>
+  let testData = null;
+  let timeLeft = 0;
+  let timerId = null;
+  let questions = [];
+  const timerDiv = document.getElementById('timer');
+  const questionsDiv = document.getElementById('questions');
+  const submitBtn = document.getElementById('submitBtn');
+  const resultDiv = document.getElementById('result');
+  const wrongQuestionsDiv = document.getElementById('wrongQuestions');
+
+  function loadTestData() {
+    const raw = localStorage.getItem('preparedTestData');
+    if (!raw) {
+      alert('No test has been prepared. Please contact your administrator.');
+      timerDiv.textContent = 'No test available.';
+      submitBtn.disabled = true;
+      return false;
+    }
+    try {
+      const data = JSON.parse(raw);
+      if (!data.questions || !Array.isArray(data.questions) || typeof data.timeLimitSeconds !== 'number') {
+        alert('Invalid test data found. Please contact your administrator.');
+        timerDiv.textContent = 'Invalid test data.';
+        submitBtn.disabled = true;
+        return false;
+      }
+      testData = data;
+      questions = data.questions; // Removed the limit to allow all questions
+      timeLeft = testData.timeLimitSeconds;
+      return true;
+    } catch (e) {
+      alert('Failed to load test data. Please contact your administrator.');
+      timerDiv.textContent = 'Error loading test data.';
+      submitBtn.disabled = true;
+      return false;
+    }
+  }
+
+  function updateTimerDisplay() {
+    const hrs = Math.floor(timeLeft / 3600);
+    const mins = Math.floor((timeLeft % 3600) / 60);
+    const secs = timeLeft % 60;
+    let timeStr = '';
+    if (hrs > 0) timeStr += hrs.toString().padStart(2, '0') + ':';
+    timeStr += mins.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
+    timerDiv.textContent = `Time left: ${timeStr}`;
+  }
+
+  function startTimer() {
+    updateTimerDisplay();
+    timerId = setInterval(() => {
+      timeLeft--;
+      updateTimerDisplay();
+      if (timeLeft <= 0) {
+        clearInterval(timerId);
+        alert('Time is up! The test will be submitted automatically.');
+        submitTest();
+      }
+    }, 1000);
+  }
+
+  function renderQuestions() {
+    questionsDiv.innerHTML = '';
+    questions.forEach((q, i) => {
+      const container = document.createElement('div');
+      container.className = 'question';
+      container.innerHTML = `<h3>Q${i + 1}. ${q.question}</h3>`;
+      const answersDiv = document.createElement('div');
+      answersDiv.className = 'answers';
+
+      q.options.forEach((opt, idx) => {
+        const optionId = `q${i}_opt${idx}`;
+        const label = document.createElement('label');
+        label.setAttribute('for', optionId);
+
+        const input = document.createElement('input');
+        input.type = 'radio';
+        input.name = `q${i}`;
+        input.id = optionId;
+        input.value = idx;
+
+        label.appendChild(input);
+        label.appendChild(document.createTextNode(opt));
+        answersDiv.appendChild(label);
+      });
+
+      container.appendChild(answersDiv);
+      questionsDiv.appendChild(container);
+    });
+  }
+
+  function submitTest() {
+    clearInterval(timerId);
+    submitBtn.disabled = true;
+
+    let score = 0;
+    const totalQuestions = questions.length;
+    const incorrect = [];
+
+    questions.forEach((q, i) => {
+      const selected = document.querySelector(`input[name="q${i}"]:checked`);
+      const userAnswerIdx = selected ? parseInt(selected.value) : null;
+      if (userAnswerIdx === q.answerIndex) {
+        score++;
+      } else {
+        incorrect.push({
+          question: q.question,
+          userAnswer: userAnswerIdx !== null ? q.options[userAnswerIdx] : '(No answer)',
+          correctAnswer: q.options[q.answerIndex]
+        });
+      }
+    });
+
+    const percent = ((score / totalQuestions) * 100).toFixed(1);
+    resultDiv.textContent = `Test complete! Score: ${score} / ${totalQuestions} (${percent}%)`;
+
+    if (incorrect.length > 0) {
+      let html = '<h4>Questions you got wrong:</h4><div><ul>';
+      incorrect.forEach(item => {
+        html += `<li><b>Question:</b> ${item.question}<br><b>Your answer:</b> ${item.userAnswer}<br><b>Correct answer:</b> ${item.correctAnswer}</li>`;
+      });
+      html += '</ul></div>';
+      wrongQuestionsDiv.innerHTML = html;
+    } else {
+      wrongQuestionsDiv.innerHTML = '<h4>Excellent! You answered all questions correctly.</h4>';
+    }
+  }
+
+  window.onload = () => {
+    if (loadTestData()) {
+      renderQuestions();
+      submitBtn.disabled = false;
+      startTimer();
+    } else {
+      submitBtn.disabled = true;
+    }
+  };
+
+  submitBtn.addEventListener('click', submitTest);
+</script>
+
+<div id="signature">by: Sweetgwapa</div>
+
+</body>
+</html>

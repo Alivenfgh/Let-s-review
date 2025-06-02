@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDF to Text OCR Converter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+  body {
+    margin: 0;
+    background: #1e1e2f;
+    color: #e0e0f0;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #7ddbff;
+    text-align: center;
+  }
+  #upload-container {
+    background: #2a2a40;
+    border-radius: 12px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 0 15px rgba(123, 219, 255, 0.3);
+    text-align: center;
+  }
+  input[type="file"] {
+    display: none;
+  }
+  label[for="file-input"] {
+    background-color: #7ddbff;
+    color: #1e1e2f;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    display: inline-block;
+  }
+  label[for="file-input"]:hover {
+    background-color: #5bb9d9;
+  }
+  #progress {
+    margin-top: 1rem;
+    font-weight: 600;
+    color: #a0dfff;
+  }
+  #output-container {
+    margin-top: 2rem;
+    background: #272743;
+    border-radius: 12px;
+    padding: 1rem;
+    width: 100%;
+    max-width: 600px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: inset 0 0 10px rgba(123, 219, 255, 0.3);
+  }
+  #output-text {
+    white-space: pre-wrap;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: #c7eaff;
+  }
+  footer {
+    margin-top: auto;
+    padding-top: 2rem;
+    font-size: 0.85rem;
+    color: #6a6a8a;
+    text-align: center;
+    user-select: none;
+  }
+  a {
+    color: #7ddbff;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+  }
+  @media (max-width: 480px) {
+    #upload-container, #output-container {
+      width: 90%;
+      max-width: 100%;
+      padding: 1rem;
+    }
+  }
+</style>
+</head>
+<body>
+<h1>PDF to Text OCR Converter</h1>
+<div id="upload-container">
+  <label for="file-input">Select PDF file to convert</label>
+  <input type="file" id="file-input" accept="application/pdf" />
+  <div id="progress"></div>
+</div>
+<div id="output-container" aria-label="Extracted text from PDF">
+  <pre id="output-text"></pre>
+</div>
+<div>
+  <button id="download-doc" style="margin: 1rem; padding: 0.5rem 1rem; background-color: #7ddbff; border: none; border-radius: 8px; cursor: pointer;">Download as DOC</button>
+</div>
+<footer>
+  Powered by <a href="https://mozilla.github.io/pdf.js/" target="_blank" rel="noopener">pdf.js</a> and <a href="https://tesseract.projectnaptha.com/" target="_blank" rel="noopener">Tesseract.js</a>. 
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+<script>
+  const fileInput = document.getElementById('file-input');
+  const progressEl = document.getElementById('progress');
+  const outputText = document.getElementById('output-text');
+  const downloadDocButton = document.getElementById('download-doc');
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.4.120/build/pdf.worker.min.js';
+
+  fileInput.addEventListener('change', handleFile, false);
+  downloadDocButton.addEventListener('click', downloadAsDoc, false);
+
+  let extractedText = '';
+
+  async function handleFile(event) {
+    const file = event.target.files[0];
+    if (!file || file.type !== 'application/pdf') {
+      alert('Please upload a valid PDF file.');
+      return;
+    }
+    outputText.textContent = '';
+    progressEl.textContent = 'Loading PDF...';
+    try {
+      const arrayBuffer = await readFileAsArrayBuffer(file);
+      const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+      const pdf = await loadingTask.promise;
+
+      const totalPages = pdf.numPages;
+      extractedText = ''; // Reset extracted text
+      for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+        progressEl.textContent = `Processing page ${pageNum} of ${totalPages}...`;
+        const page = await pdf.getPage(pageNum);
+
+        // Render page to canvas at scale 2 to improve OCR accuracy
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+        // Run OCR on this canvas
+        progressEl.textContent = `Performing OCR on page ${pageNum}...`;
+        const { data: { text } } = await Tesseract.recognize(
+          canvas,
+          'eng',
+          {
+            logger: m => {
+              if (m.status === 'recognizing text') {
+                progressEl.textContent = `Page ${pageNum}: OCR progress ${(m.progress * 100).toFixed(0)}%`;
+              }
+            }
+          }
+        );
+        extractedText += `--- Page ${pageNum} ---\n${text.trim()}\n\n`;
+
+        // Free canvas memory
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+      progressEl.textContent = 'OCR complete!';
+      outputText.textContent = extractedText.trim() || '[No text detected]';
+    } catch (err) {
+      progressEl.textContent = 'Error processing PDF.';
+      console.error(err);
+      alert('An error occurred while processing the PDF. Please try another file.');
+    }
+  }
+
+  function readFileAsArrayBuffer(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = e => reject(e);
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function downloadAsDoc() {
+    const blob = new Blob([extractedText], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'extracted_text.doc';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+</script>
+</body>
+</html>

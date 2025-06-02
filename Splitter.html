@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PDF Page Splitter & Extractor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #0b1446;
+    color: #d0f0ec;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #1abc9c;
+    letter-spacing: 1px;
+  }
+  .container {
+    background: #12335f;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 720px;
+    width: 100%;
+    box-shadow: 0 10px 25px rgba(26,188,156,0.3);
+  }
+  label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #71d1c1;
+    cursor: pointer;
+  }
+  input[type="file"] {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: none;
+    background: #1d466c;
+    color: #afefe8;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.3s ease;
+  }
+  input[type="file"]:hover {
+    background: #269a8d;
+    color: #fff;
+  }
+  .options {
+    margin-top: 1rem;
+    user-select: none;
+  }
+  .option {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+  }
+  input[type="radio"] {
+    margin-right: 0.75rem;
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: #1abc9c;
+  }
+  button {
+    width: 100%;
+    margin-top: 1.25rem;
+    padding: 0.85rem;
+    font-weight: 600;
+    font-size: 1.1rem;
+    background: #1abc9c;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    color: #fff;
+    box-shadow: 0 5px 10px rgba(26,188,156,0.5);
+  }
+  button:hover:not(:disabled) {
+    background: #16a085;
+    box-shadow: 0 6px 14px rgba(22,160,133,0.7);
+  }
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+  .output {
+    margin-top: 2rem;
+    color: #b7e4db;
+  }
+  .download-link {
+    background: #1d466c;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    border-radius: 8px;
+    color: #1abc9c;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 3px 8px #19bb9d88;
+    transition: background 0.3s ease;
+  }
+  .download-link:hover {
+    background: #269a8d;
+  }
+  .page-preview-grid {
+    margin-top: 1rem;
+    max-height: 320px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 12px;
+    padding: 4px;
+    border: 2px solid #186662;
+    border-radius: 12px;
+    background: #16475b;
+  }
+  .page-preview-item {
+    position: relative;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 0 6px #000;
+    transition: box-shadow 0.3s ease;
+  }
+  .page-preview-item.selected {
+    box-shadow: 0 0 10px 4px #1abc9c;
+  }
+  .page-canvas {
+    display: block;
+    width: 100%;
+    border-radius: 8px;
+    user-select: none;
+  }
+  .checkbox-overlay {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: #1abc9ccc;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    color: white;
+    font-weight: 900;
+    font-size: 16px;
+    user-select: none;
+  }
+  .select-buttons {
+    margin: 10px 0 6px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .select-buttons button {
+    width: auto;
+    padding: 0.4rem 0.8rem;
+    background: #20637f;
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #b7e4db;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    box-shadow: 0 2px 8px #1abc9d44;
+  }
+  .select-buttons button:hover {
+    background: #33a999;
+    color: #e0fff9;
+    box-shadow: 0 3px 12px #33a999cc;
+  }
+  footer {
+    margin-top: auto;
+    font-size: 0.8rem;
+    color: #5daaa9;
+  }
+  .info-text {
+    margin-top: 0.5rem;
+    color: #a3d6ca;
+    font-size: 0.9rem;
+  }
+  .error {
+    color: #f08080;
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+</style>
+</head>
+<body>
+  <h1>PDF Page Splitter & Extractor</h1>
+  <div class="container" role="main">
+    <label for="pdfFile">Upload PDF file</label>
+    <input type="file" id="pdfFile" accept="application/pdf" aria-describedby="fileHelp" />
+    <small id="fileHelp" class="info-text">Select a PDF document to split or extract pages.</small>
+
+    <div class="options" role="radiogroup" aria-labelledby="splitOptionsLabel">
+      <p id="splitOptionsLabel" style="font-weight: 600; margin-bottom: 0.5rem; color:#71d1c1;">Options</p>
+      <div class="option">
+        <input type="radio" id="splitAll" name="splitOption" value="all" checked />
+        <label for="splitAll">Split all pages (each page as separate PDF)</label>
+      </div>
+      <div class="option">
+        <input type="radio" id="extractSelected" name="splitOption" value="extract" />
+        <label for="extractSelected">Extract selected pages (single PDF)</label>
+      </div>
+    </div>
+
+    <div id="previewContainer" aria-live="polite" aria-atomic="true" style="display:none;">
+      <div class="select-buttons">
+        <button type="button" id="selectAllPages">Select All</button>
+        <button type="button" id="deselectAllPages">Deselect All</button>
+      </div>
+      <div class="page-preview-grid" id="pagePreviewGrid" tabindex="0" aria-label="Page preview and selector"></div>
+    </div>
+
+    <button id="splitBtn" disabled>Split PDF</button>
+
+    <div class="output" id="output" aria-live="polite" aria-atomic="true"></div>
+  </div>
+  <footer>
+    &copy; 2024 PDF Splitter & Extractor - Built by BLACKBOXAI
+  </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+<script>
+  const pdfFileInput = document.getElementById('pdfFile');
+  const splitAllRadio = document.getElementById('splitAll');
+  const extractSelectedRadio = document.getElementById('extractSelected');
+  const previewContainer = document.getElementById('previewContainer');
+  const pagePreviewGrid = document.getElementById('pagePreviewGrid');
+  const splitBtn = document.getElementById('splitBtn');
+  const output = document.getElementById('output');
+  const selectAllBtn = document.getElementById('selectAllPages');
+  const deselectAllBtn = document.getElementById('deselectAllPages');
+
+  let loadedPdfBytes = null;
+  let pdfDoc = null;
+  let totalPages = 0;
+  let pageSelections = [];
+
+  function createPagePreviewItem(pageNumber) {
+    const div = document.createElement('div');
+    div.className = 'page-preview-item';
+    div.tabIndex = 0;
+    div.setAttribute('role', 'checkbox');
+    div.setAttribute('aria-checked', 'false');
+    div.setAttribute('aria-label', `Page ${pageNumber}`);
+    div.dataset.pageNumber = pageNumber;
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'page-canvas';
+    canvas.width = 90;
+    canvas.height = 120;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#186e66';  // teal dark bg
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#71d1c1';  // teal pale border
+    ctx.lineWidth = 4;
+    ctx.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+    ctx.fillStyle = '#1abc9c';  // teal bright text
+    ctx.font = 'bold 36px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(pageNumber, canvas.width / 2, canvas.height / 2);
+    div.appendChild(canvas);
+
+    const checkboxOverlay = document.createElement('div');
+    checkboxOverlay.className = 'checkbox-overlay';
+    checkboxOverlay.textContent = '✓';
+    checkboxOverlay.style.display = 'none';
+    div.appendChild(checkboxOverlay);
+
+    div.addEventListener('click', () => {
+      togglePageSelection(pageNumber);
+    });
+    div.addEventListener('keydown', e => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        togglePageSelection(pageNumber);
+      }
+    });
+    return div;
+  }
+
+  function togglePageSelection(pageNumber) {
+    const index = pageSelections.indexOf(pageNumber);
+    if (index === -1) {
+      pageSelections.push(pageNumber);
+    } else {
+      pageSelections.splice(index, 1);
+    }
+    updatePagePreviewSelection();
+    updateSplitButtonState();
+  }
+
+  function updatePagePreviewSelection() {
+    const items = pagePreviewGrid.children;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const pNum = parseInt(item.dataset.pageNumber, 10);
+      const isSelected = pageSelections.includes(pNum);
+      if (isSelected) {
+        item.classList.add('selected');
+        item.setAttribute('aria-checked', 'true');
+        item.querySelector('.checkbox-overlay').style.display = 'flex';
+      } else {
+        item.classList.remove('selected');
+        item.setAttribute('aria-checked', 'false');
+        item.querySelector('.checkbox-overlay').style.display = 'none';
+      }
+    }
+  }
+
+  async function buildPreviewGrid() {
+    pagePreviewGrid.innerHTML = '';
+    pageSelections = [];
+    for (let i = 0; i < totalPages; i++) {
+      const pageNum = i + 1;
+      const pageItem = createPagePreviewItem(pageNum);
+      pagePreviewGrid.appendChild(pageItem);
+    }
+  }
+
+  function updateSplitButtonState() {
+    splitBtn.disabled = !loadedPdfBytes || (extractSelectedRadio.checked && pageSelections.length === 0);
+  }
+
+  pdfFileInput.addEventListener('change', async () => {
+    output.innerHTML = '';
+    splitBtn.disabled = true;
+    previewContainer.style.display = 'none';
+    if (pdfFileInput.files.length === 0) return;
+    const file = pdfFileInput.files[0];
+    if (file.type !== 'application/pdf') {
+      output.textContent = 'Please upload a valid PDF file.';
+      loadedPdfBytes = null;
+      totalPages = 0;
+      return;
+    }
+    loadedPdfBytes = await file.arrayBuffer();
+    try {
+      pdfDoc = await PDFLib.PDFDocument.load(loadedPdfBytes);
+      totalPages = pdfDoc.getPageCount();
+      output.innerHTML = `<p>Loaded PDF with <strong>${totalPages}</strong> pages.</p>`;
+      if (extractSelectedRadio.checked) {
+        previewContainer.style.display = 'block';
+        await buildPreviewGrid();
+      }
+      updateSplitButtonState();
+    } catch (err) {
+      output.textContent = 'Failed to load PDF file. Please try another file.';
+      loadedPdfBytes = null;
+      totalPages = 0;
+      splitBtn.disabled = true;
+      previewContainer.style.display = 'none';
+    }
+  });
+
+  splitAllRadio.addEventListener('change', () => {
+    previewContainer.style.display = 'none';
+    updateSplitButtonState();
+  });
+
+  extractSelectedRadio.addEventListener('change', async () => {
+    if (!loadedPdfBytes) {
+      previewContainer.style.display = 'none';
+      splitBtn.disabled = true;
+      return;
+    }
+    previewContainer.style.display = 'block';
+    if (pdfDoc) {
+      await buildPreviewGrid();
+    }
+    updateSplitButtonState();
+  });
+
+  selectAllBtn.addEventListener('click', () => {
+    pageSelections = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pageSelections.push(i);
+    }
+    updatePagePreviewSelection();
+    updateSplitButtonState();
+  });
+  deselectAllBtn.addEventListener('click', () => {
+    pageSelections = [];
+    updatePagePreviewSelection();
+    updateSplitButtonState();
+  });
+
+  splitBtn.addEventListener('click', async () => {
+    output.innerHTML = '';
+    splitBtn.disabled = true;
+    splitBtn.textContent = 'Processing...';
+
+    try {
+      if (!pdfDoc) throw new Error('No PDF loaded');
+
+      if (splitAllRadio.checked) {
+        const segments = [];
+        for (let i = 0; i < totalPages; i++) {
+          const newPdf = await PDFLib.PDFDocument.create();
+          const [copiedPage] = await newPdf.copyPages(pdfDoc, [i]);
+          newPdf.addPage(copiedPage);
+          const pdfBytes = await newPdf.save();
+          segments.push({ bytes: pdfBytes, label: `Page-${i + 1}.pdf` });
+        }
+        output.innerHTML = `<p>Split successful! Download your PDFs below:</p>`;
+        segments.forEach((seg) => {
+          const blob = new Blob([seg.bytes], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = seg.label;
+          a.textContent = seg.label;
+          a.className = 'download-link';
+          a.setAttribute('aria-label', `Download split PDF: ${seg.label}`);
+          output.appendChild(a);
+          output.appendChild(document.createElement('br'));
+        });
+      } else if (extractSelectedRadio.checked) {
+        if (pageSelections.length === 0) {
+          output.textContent = 'No pages selected.';
+          splitBtn.disabled = false;
+          splitBtn.textContent = 'Split PDF';
+          return;
+        }
+        const newPdf = await PDFLib.PDFDocument.create();
+        const sortedSelections = Array.from(new Set(pageSelections)).sort((a,b) => a-b);
+        const zeroBasedIndices = sortedSelections.map(p => p - 1);
+        const copiedPages = await newPdf.copyPages(pdfDoc, zeroBasedIndices);
+        copiedPages.forEach(p => newPdf.addPage(p));
+        const pdfBytes = await newPdf.save();
+        const label =
+          sortedSelections.length === 1
+            ? `Page-${sortedSelections[0]}-extracted.pdf`
+            : `Pages-${sortedSelections[0]}-to-${sortedSelections[sortedSelections.length - 1]}-extracted.pdf`;
+
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        output.innerHTML = `<p>Extraction successful! Download your PDF below:</p>`;
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = label;
+        a.textContent = label;
+        a.className = 'download-link';
+        a.setAttribute('aria-label', `Download extracted PDF: ${label}`);
+        output.appendChild(a);
+      }
+    } catch (error) {
+      output.textContent = 'Error processing PDF: ' + error.message;
+    } finally {
+      splitBtn.disabled = false;
+      splitBtn.textContent = 'Split PDF';
+    }
+  });
+</script>
+</body>
+</html>

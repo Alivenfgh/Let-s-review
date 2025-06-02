@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Word to PDF Converter</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+  body {
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    background: #0b1446;
+    color: #d0f0ec;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+  h1 {
+    color: #1abc9c;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: 1.2px;
+  }
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 300px;
+  }
+  input[type="file"] {
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid #1abc9c;
+    background: #0b1446;
+    color: #d0f0ec;
+  }
+  button {
+    background: #1abc9c;
+    color: #0b1446;
+    padding: 1rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    border-radius: 12px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  button:hover {
+    background: #16a085;
+  }
+  .signature {
+    margin-top: 3rem;
+    font-size: 1rem;
+    font-style: italic;
+    font-weight: 600;
+    color: #71d1c1;
+    user-select: none;
+  }
+  .loading {
+    display: none;
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: #d0f0ec;
+  }
+  .spinner {
+    border: 4px solid #1abc9c;
+    border-top: 4px solid transparent;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  .download-link {
+    display: none;
+    margin-top: 1rem;
+    color: #1abc9c;
+    text-decoration: none;
+  }
+</style>
+</head>
+<body>
+  <h1>Word to PDF Converter</h1>
+  <div class="form-container">
+    <input type="file" id="wordFile" accept=".doc,.docx" multiple aria-label="Upload Word Document(s)" />
+    <button id="convertButton" aria-label="Convert to PDF">Convert to PDF</button>
+    <button id="joinButton" aria-label="Join PDFs">Join Converted PDFs</button>
+    <div class="loading" id="loadingIndicator">
+      <div class="spinner"></div> Processing...
+    </div>
+    <a href="#" id="downloadLink" class="download-link" download>Download Converted PDF</a>
+  </div>
+  <div class="signature" aria-label="Signature">
+    By: Sweetgwapa
+  </div>
+
+  <script>
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const downloadLink = document.getElementById('downloadLink');
+    const wordFileInput = document.getElementById('wordFile');
+
+    document.getElementById('convertButton').addEventListener('click', async function() {
+      loadingIndicator.style.display = 'flex'; // Show loading indicator
+
+      const files = wordFileInput.files;
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      try {
+        const response = await fetch('/api/convert-to-pdf', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
+        loadingIndicator.style.display = 'none'; // Hide loading indicator
+
+        if (result.success) {
+          downloadLink.href = result.filePath; // Set the download link to the generated PDF file path
+          downloadLink.style.display = 'block'; // Show download link
+          alert('Conversion complete! You can download the PDF now.');
+        } else {
+          alert('Conversion failed: ' + result.message);
+        }
+      } catch (error) {
+        loadingIndicator.style.display = 'none'; // Hide loading indicator
+        console.error('Error details:', error); // Log error details to console
+        alert('An error occurred: ' + error.message);
+      }
+    });
+
+    document.getElementById('joinButton').addEventListener('click', async function() {
+      loadingIndicator.style.display = 'flex'; // Show loading indicator
+
+      try {
+        const response = await fetch('/api/join-pdfs', {
+          method: 'POST',
+          body: JSON.stringify({ files: ['path/to/converted-file1.pdf', 'path/to/converted-file2.pdf'] }), // Replace with actual paths
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        const result = await response.json();
+        loadingIndicator.style.display = 'none'; // Hide loading indicator
+
+        if (result.success) {
+          downloadLink.href = result.filePath; // Set the download link to the generated joined PDF file path
+          downloadLink.style.display = 'block'; // Show download link
+          alert('Joining complete! You can download the joined PDF now.');
+        } else {
+          alert('Joining failed: ' + result.message);
+        }
+      } catch (error) {
+        loadingIndicator.style.display = 'none'; // Hide loading indicator
+        console.error('Error details:', error); // Log error details to console
+        alert('An error occurred: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
